@@ -1,23 +1,3 @@
---[[
-    ╔════════════════════════════════════════════════════════════════════════════════════════╗
-    ║                           SLEEK NOTIFICATION SYSTEM                                    ║
-    ║                          Modern UI Notification Library                                ║
-    ║                              Author: Claude AI                                         ║
-    ╚════════════════════════════════════════════════════════════════════════════════════════╝
-
-    Usage:
-    local NotificationSystem = require(script.NotificationSystem)
-    NotificationSystem.notify("Your message here", "Optional Title", 4)
-    
-    Features:
-    • Sleek modern design with gradients and shadows
-    • Smooth fade in/out animations with bounce effects
-    • Queue system for multiple notifications
-    • Customizable duration, title, and message
-    • Automatic positioning and spacing
-    • Easy integration and customization
-]]
-
 local NotificationSystem = {}
 
 -- ════════════════════════════════════════════════════════════════════════════════════════
@@ -414,12 +394,14 @@ local function createNotification(message, title, duration)
     
     -- Auto-dismiss after duration
     local dismissDuration = duration or CONFIG.DEFAULT_DURATION
-    task.wait(dismissDuration)
-    
-    -- Check if notification still exists before dismissing
-    if notification and notification.Parent then
-        dismissNotification(notification)
-    end
+    task.spawn(function()
+        task.wait(dismissDuration)
+        
+        -- Check if notification still exists before dismissing
+        if notification and notification.Parent then
+            dismissNotification(notification)
+        end
+    end)
 end
 
 -- ════════════════════════════════════════════════════════════════════════════════════════
@@ -491,6 +473,51 @@ initializeNotificationSystem()
 -- ════════════════════════════════════════════════════════════════════════════════════════
 
 return NotificationSystem
+
+--[[
+    ╔════════════════════════════════════════════════════════════════════════════════════════╗
+    ║                                SETUP INSTRUCTIONS                                      ║
+    ╚════════════════════════════════════════════════════════════════════════════════════════╝
+    
+    STEP 1: Create the Module
+    1. In Studio, go to ReplicatedStorage
+    2. Insert a ModuleScript
+    3. Rename it to "NotificationSystem" 
+    4. Paste this entire code into the ModuleScript
+    
+    STEP 2: Create a Test Script
+    1. In StarterPlayerScripts, insert a LocalScript
+    2. Name it "NotificationTest"
+    3. Use this code in the LocalScript:
+    
+    ```lua
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local NotificationSystem = require(ReplicatedStorage:WaitForChild("NotificationSystem"))
+    
+    -- Wait for player to load
+    game.Players.LocalPlayer.CharacterAdded:Wait()
+    wait(2) -- Give GUI time to load
+    
+    -- Test notifications
+    NotificationSystem.notify("Welcome to the game!", "Hello Player")
+    
+    wait(3)
+    NotificationSystem.notify("This is a longer message to test text wrapping and see how it looks!", "Long Message Test", 6)
+    
+    wait(2)  
+    NotificationSystem.notify("Quick message", "Short", 2)
+    ```
+    
+    STEP 3: Test in Game
+    1. Click "Play" in Studio
+    2. You should see notifications appear at the top of your screen
+    
+    If still not working, check:
+    - Make sure the ModuleScript is named exactly "NotificationSystem"
+    - Make sure it's in ReplicatedStorage 
+    - Check the Output window for any error messages
+    - Make sure you're using a LocalScript, not a regular Script
+]]
 
 --[[
     ╔════════════════════════════════════════════════════════════════════════════════════════╗
