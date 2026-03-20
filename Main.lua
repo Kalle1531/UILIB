@@ -1,3 +1,18 @@
+--[[
+    NexusUI Library v1.0
+    A full-featured Roblox Lua UI Library
+    Inspired by Rayfield — built from scratch.
+
+    Usage:
+        local NexusUI = loadstring(game:HttpGet("..."))()
+        local Window = NexusUI:CreateWindow({ Title = "My App", Subtitle = "v1.0" })
+        local Tab = Window:CreateTab("Main", "rbxassetid://...")
+        Tab:CreateButton({ Name = "Click Me", Callback = function() end })
+--]]
+
+-- ────────────────────────────────────────────────
+--  Services
+-- ────────────────────────────────────────────────
 local TweenService      = game:GetService("TweenService")
 local UserInputService  = game:GetService("UserInputService")
 local RunService        = game:GetService("RunService")
@@ -1186,14 +1201,16 @@ function NexusUI:CreateWindow(config)
                 Parent           = dropBtn,
             })
 
-            -- List (ScrollingFrame so long option lists are scrollable)
-            local dropList = New("ScrollingFrame", {
-                AnchorPoint          = Vector2.new(0, 0),
-                Position             = UDim2.new(0, 0, 1, 4),
-                Size                 = UDim2.new(1, 0, 0, 0),
+            -- ── Dropdown list ─────────────────────────────────────────────────
+            -- Parented directly to ScreenGui so it is never clipped by any
+            -- ancestor frame. Position is updated every frame to track dropBtn.
+            local totalH    = math.min(#options * 26, 120)
+            local dropList  = New("ScrollingFrame", {
+                Position             = UDim2.new(0, 0, 0, 0),  -- set dynamically below
+                Size                 = UDim2.new(0, 0, 0, 0),
                 BackgroundColor3     = NexusUI.Theme.SecondaryBG,
                 ClipsDescendants     = true,
-                ZIndex               = 10,
+                ZIndex               = 50,
                 Visible              = false,
                 BorderSizePixel      = 0,
                 ScrollBarThickness   = 3,
@@ -1201,14 +1218,41 @@ function NexusUI:CreateWindow(config)
                 CanvasSize           = UDim2.new(0, 0, 0, 0),
                 AutomaticCanvasSize  = Enum.AutomaticSize.Y,
                 ScrollingDirection   = Enum.ScrollingDirection.Y,
-                Parent               = frame,
+                Parent               = ScreenGui,    -- top-level: never clipped
             })
             Corner(NexusUI.Theme.SmallCorner, dropList)
             Stroke(NexusUI.Theme.Border, 1, dropList)
             ListLayout(dropList, 0)
 
+            -- Keep list width & position in sync with dropBtn every frame
+            local trackConn = RunService.RenderStepped:Connect(function()
+                if not dropBtn.Parent then return end
+                local absPos  = dropBtn.AbsolutePosition
+                local absSize = dropBtn.AbsoluteSize
+                -- prefer opening downward; if too close to bottom flip upward
+                local screenH   = ScreenGui.AbsoluteSize.Y
+                local listH     = dropList.AbsoluteSize.Y
+                local spaceBelow = screenH - (absPos.Y + absSize.Y + 4)
+                local posY
+                if spaceBelow >= listH or spaceBelow >= 60 then
+                    posY = absPos.Y + absSize.Y + 4          -- below
+                else
+                    posY = absPos.Y - listH - 4              -- above
+                end
+                dropList.Position = UDim2.new(0, absPos.X, 0, posY)
+                dropList.Size     = UDim2.new(0, absSize.X, 0, dropList.Size.Y.Offset)
+            end)
+            table.insert(Window._connections, trackConn)
+
             local isOpen = false
             local value  = default
+
+            local function closeDropdown()
+                isOpen = false
+                Tween(dropList, {Size = UDim2.new(0, dropList.Size.X.Offset, 0, 0)}, 0.2)
+                Tween(arrow, {Rotation = 0}, 0.2)
+                task.delay(0.21, function() dropList.Visible = false end)
+            end
 
             local function buildList()
                 for _, child in ipairs(dropList:GetChildren()) do
@@ -1223,7 +1267,7 @@ function NexusUI:CreateWindow(config)
                         Font             = NexusUI.Theme.Font,
                         TextSize         = 12,
                         AutoButtonColor  = false,
-                        ZIndex           = 11,
+                        ZIndex           = 51,
                         Parent           = dropList,
                     })
                     Padding(0, 8, 0, 8, optBtn)
@@ -1236,11 +1280,7 @@ function NexusUI:CreateWindow(config)
                     optBtn.MouseButton1Click:Connect(function()
                         value = opt
                         selectedLabel.Text = tostring(opt)
-                        isOpen = false
-                        Tween(dropList, {Size = UDim2.new(1, 0, 0, 0)}, 0.2)
-                        Tween(arrow, {Rotation = 0}, 0.2)
-                        task.wait(0.21)
-                        dropList.Visible = false
+                        closeDropdown()
                         buildList()
                         pcall(cb, value)
                         Window:SaveAllConfigs()
@@ -1252,16 +1292,15 @@ function NexusUI:CreateWindow(config)
             dropBtn.MouseButton1Click:Connect(function()
                 isOpen = not isOpen
                 if isOpen then
+                    -- sync width immediately before animating open
+                    local absSize = dropBtn.AbsoluteSize
+                    dropList.Size    = UDim2.new(0, absSize.X, 0, 0)
                     dropList.Visible = true
-                    dropList.Size = UDim2.new(1, 0, 0, 0)
-                    local totalH = math.min(#options * 26, 120)
-                    Tween(dropList, {Size = UDim2.new(1, 0, 0, totalH)}, 0.2)
+                    totalH = math.min(#options * 26, 120)
+                    Tween(dropList, {Size = UDim2.new(0, absSize.X, 0, totalH)}, 0.2)
                     Tween(arrow, {Rotation = 180}, 0.2)
                 else
-                    Tween(dropList, {Size = UDim2.new(1, 0, 0, 0)}, 0.2)
-                    Tween(arrow, {Rotation = 0}, 0.2)
-                    task.wait(0.21)
-                    dropList.Visible = false
+                    closeDropdown()
                 end
             end)
 
