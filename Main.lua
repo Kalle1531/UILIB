@@ -280,6 +280,21 @@ function NexusUI:CreateWindow(config)
     local keybind   = config.ToggleKey or Enum.KeyCode.RightShift
     local configKey = config.ConfigKey or (title:gsub("%s", "_"))
 
+    -- ── Destroy any previous NexusUI windows ────
+    -- Cleans up old instances so re-executing the script replaces the UI
+    for _, gui in ipairs(PlayerGui:GetChildren()) do
+        if gui.Name:sub(1, 8) == "NexusUI_" and gui ~= NotifGui then
+            -- Disconnect signal: fire a fake "closing" tween then destroy
+            pcall(function()
+                local m = gui:FindFirstChild("Main")
+                if m then
+                    TweenService:Create(m, TweenInfo.new(0.2), {BackgroundTransparency = 1, Size = UDim2.new(0, 0, 0, 0)}):Play()
+                end
+            end)
+            task.delay(0.22, function() gui:Destroy() end)
+        end
+    end
+
     local savedConfig = self:LoadConfig(configKey)
 
     -- ── Root ScreenGui ──────────────────────────
@@ -1171,16 +1186,22 @@ function NexusUI:CreateWindow(config)
                 Parent           = dropBtn,
             })
 
-            -- List
-            local dropList = New("Frame", {
-                AnchorPoint      = Vector2.new(0, 0),
-                Position         = UDim2.new(0, 0, 1, 4),
-                Size             = UDim2.new(1, 0, 0, 0),
-                BackgroundColor3 = NexusUI.Theme.SecondaryBG,
-                ClipsDescendants = true,
-                ZIndex           = 10,
-                Visible          = false,
-                Parent           = frame,
+            -- List (ScrollingFrame so long option lists are scrollable)
+            local dropList = New("ScrollingFrame", {
+                AnchorPoint          = Vector2.new(0, 0),
+                Position             = UDim2.new(0, 0, 1, 4),
+                Size                 = UDim2.new(1, 0, 0, 0),
+                BackgroundColor3     = NexusUI.Theme.SecondaryBG,
+                ClipsDescendants     = true,
+                ZIndex               = 10,
+                Visible              = false,
+                BorderSizePixel      = 0,
+                ScrollBarThickness   = 3,
+                ScrollBarImageColor3 = NexusUI.Theme.Accent,
+                CanvasSize           = UDim2.new(0, 0, 0, 0),
+                AutomaticCanvasSize  = Enum.AutomaticSize.Y,
+                ScrollingDirection   = Enum.ScrollingDirection.Y,
+                Parent               = frame,
             })
             Corner(NexusUI.Theme.SmallCorner, dropList)
             Stroke(NexusUI.Theme.Border, 1, dropList)
